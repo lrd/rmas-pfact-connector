@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camel="http://camel.apache.org/schema/blueprint"
+	xmlns:camelcxf="http://camel.apache.org/schema/blueprint/cxf"
+	xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
+	xmlns:jaxws="http://cxf.apache.org/blueprint/jaxws" xmlns:cxf="http://cxf.apache.org/blueprint/core"
+	xsi:schemaLocation="http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd
+		http://cxf.apache.org/transports/camel http://cxf.apache.org/transports/camel.xsd
+		http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+		http://cxf.apache.org/blueprint/jaxws http://cxf.apache.org/schemas/blueprint/jaxws.xsd">
+
+	<cm:property-placeholder persistent-id="org.rmas.pfact.properties">
+		<cm:default-properties>
+			<cm:property name="rmas.bus.endpoint.url" value="http://localhost:8181/cxf/rmas/events" />
+			<cm:property name="rmas.bus.endpoint.username" value="jim" />
+			<cm:property name="rmas.bus.endpoint.password" value="password" />
+		</cm:default-properties>
+	</cm:property-placeholder>
+
+	<jaxws:client id="rmasclient" serviceClass="org.rmas.pfact.IEventEndpoint"
+		address="${rmas.bus.endpoint.url}">
+		<jaxws:outInterceptors>
+			<bean class="org.apache.cxf.ws.security.wss4j.WSS4JOutInterceptor">
+				<property name="properties">
+					<map>
+						<entry key="action" value="UsernameToken" />
+						<entry key="passwordType" value="PasswordText" />
+						<entry key="user" value="${rmas.bus.endpoint.username}" />
+						<entry key="passwordCallbackRef">
+							<ref component-id="clientCB" />
+						</entry>
+					</map>
+				</property>
+			</bean>
+		</jaxws:outInterceptors>
+	</jaxws:client>
+
+	<bean id="clientCB" class="org.rmas.pfact.ClientCB">
+		<property name="username" value="${rmas.bus.endpoint.username}" />
+		<property name="password" value="${rmas.bus.endpoint.password}" />
+	</bean>
+
+	<bean id="routes" class="org.rmas.pfact.PfactRoutes" />
+	
+	<camelContext id="org.rmas.pfact.events" trace="true"
+		xmlns="http://camel.apache.org/schema/blueprint">
+		<camel:routeBuilder ref="routes" />
+	</camelContext>
+
+</blueprint>
