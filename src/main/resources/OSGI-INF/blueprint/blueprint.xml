@@ -14,6 +14,10 @@
 			<cm:property name="rmas.bus.endpoint.url" value="http://localhost:8181/cxf/rmas/events" />
 			<cm:property name="rmas.bus.endpoint.username" value="jim" />
 			<cm:property name="rmas.bus.endpoint.password" value="password" />
+			<cm:property name="connectordb.driverClassName" value="com.mysql.jdbc.Driver" />
+			<cm:property name="connectordb.url" value="jdbc:mysql://localhost/connectordb" />
+			<cm:property name="connectordb.username" value="root" />
+			<cm:property name="connectordb.password" value="root" />
 		</cm:default-properties>
 	</cm:property-placeholder>
 
@@ -35,14 +39,33 @@
 		</jaxws:outInterceptors>
 	</jaxws:client>
 
+	<bean id="pfactdata" class="org.rmas.pfact.Data">
+		<property name="ds" ref="connectordb" />
+	</bean>
+
+	<bean id="idempotentrepo"
+		class="org.apache.camel.processor.idempotent.jdbc.JdbcMessageIdRepository">
+		<argument ref="connectordb" />
+		<argument value="idempotent-repo" />
+	</bean>
+
+	<bean id="connectordb" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${connectordb.driverClassName}" />
+		<property name="url" value="${connectordb.url}" />
+		<property name="username" value="${connectordb.username}" />
+		<property name="password" value="${connectordb.password}" />
+	</bean>
+
 	<bean id="clientCB" class="org.rmas.pfact.ClientCB">
 		<property name="username" value="${rmas.bus.endpoint.username}" />
 		<property name="password" value="${rmas.bus.endpoint.password}" />
 	</bean>
 
-	<bean id="routes" class="org.rmas.pfact.PfactRoutes" />
-	
-	<camelContext id="org.rmas.pfact.events" trace="true"
+	<bean id="routes" class="org.rmas.pfact.PfactRoutes">
+		<argument ref="idempotentrepo" />
+	</bean>
+
+	<camelContext id="org.rmas.pfact.events" trace="false"
 		xmlns="http://camel.apache.org/schema/blueprint">
 		<camel:routeBuilder ref="routes" />
 	</camelContext>
